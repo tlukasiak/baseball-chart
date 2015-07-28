@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  font: 10px sans-serif;
+}
+
+.bar rect {
+  shape-rendering: crispEdges;
+}
+.bar text {
+  fill: #fff;
+}
+
+.axis path, .axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges; /* prevent anti-aliasing */
+}
+</style>
+
+<script>
+function draw(data) {
+
+
+  radius = 8;
+
+  /* Install callback on the checkbox to allow the user to filter out avrages of 0 */
+  d3.select("input")
+  .property('checked', false)
+  .on("change", function() {
+    if (this.checked) {
+      drawChart(data, "avg", 0.0, margin)
+    }
+    else {
+      drawChart(data, "avg", -0.1, margin)
+    }
+  });
+
+  var formatCount = d3.format(",.0f"); // for displaying counts in each bar of the histogram
+
+  var margin = {top: 10, right: 30, bottom: 30, left: 30},
+      width = 960 - margin.left - margin.right,
+      height = 400 - margin.top - margin.bottom;
+
+  drawChart(data, "avg", -0.1, margin);
+
+  function drawChart(data, column, minValue, margin) {
+
+    d3.select("svg").remove();
+    
+    var max = d3.max(data, function(d) { return d[column];});
+
+    var data = data.filter(function(d) {
+        return d[column] > minValue;
+    });
+
+    var x = d3.scale.linear()
+        .domain(d3.extent(data, function(d) {return d[column];} ))
+        .range([0, width]);
+
+      var y = d3.scale.linear()
+          // .domain([0, d3.max(hist, function(d) { return d.y; })])
+          .domain([0, 200])
+          .range([height, 0]);
+
+    var svg = d3.select("body").append("svg")
+        .attr("class", "chart")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var xAxis = d3.svg.axis()
+        .scale(x)
+        .orient("bottom");
+
+    svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis)
+        .append("text") // text label for the x axis
+        .attr("x", width/2)
+        .attr("y", 25)
+        .style("text-anchor", "middle")
+        .text(column);
+
+    var handednessMap = {
+      "R": {"color": "blue", "text": "Right-Handed"},
+      "L": {"color": "red", "text": "Left-Handed"},
+      "B": {"color": "green", "text": "Both-Handed"}
+    };
+
+    /* Loop over the handedness and draw a histogram for each */
+    for (handedness in handednessMap) {  
+      var filtered = data.filter(function(d) {
+          return d['handedness'] === handedness;
+      });
+      drawHistogram(filtered, column, handednessMap[handedness].color);
+    }
+
+    /* Add a Legend */
+    var legend = svg.append("g")
+      .attr("class", "legend")
+      .attr("transform", "translate(" + (width - 100) + "," + 20 + ")")
+      .selectAll("g")
+      .data(["R", "L", "B"])
+      .enter().append("g");
+
+    legend.append("circle")
+      .attr("cy", function(d, i) {
+        return i * 30;
+      })
+      .attr("r", function(d) {
+        if (d == "Home Team") {
+          return radius * multiplier;
+        } else {
+          return radius;
+        }
+      })
+      .attr("fill", function(d) { return handednessMap[d].color; })
+      .attr("opacity", 0.5);
+
+    legend.append("text")
+      .attr("y", function(d, i) {
+        return i * 30 + 5;
+      })
+      .attr("x", radius * 5)
+      .text(function(d) {
+        return handednessMap[d].text;
+      });
+
+    /* Inner function to actually draw the histogram bars */
+    function drawHistogram(data, column, barFill) {
+
+      var hist = d3.layout.histogram()
+        .bins(x.ticks(35))
+        (data.map(function(d) {return d[column]; } ));
+
+      var xMin = d3.min(data, function(d) {return d[column];} );
+
+      var bar = svg.selectAll(".bar." + barFill)
+        .data(hist)
+        .enter().append("g")
+        .attr("class", "bar " + barFill)
+        .attr("transform", function(d) { return "translate(" + x(d.x) + "," + y(d.y) + ")"; });
+
+      bar.append("rect")
+        .attr("opacity", 0.5)
+        .attr("fill", barFill)
+        .attr("x", 1)
+        .attr("width", x(x.domain()[0]+hist[0].dx) - 1)
+        .attr("height", function(d) { return height - y(d.y); });
+
+      bar.append("text")
+        .attr("dy", ".75em")
+        .attr("y", 6)
+        .attr("x", x(x.domain()[0]+hist[0].dx) / 2)
+        .attr("text-anchor", "middle")
+        .text(function(d) { return formatCount(d.y); });
+    }
+  }
+}
+
+</script>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js"></script>
+<script type="text/javascript">
+  d3.csv("baseball_data.csv",
+    function(d) {
+      // Convert numberical data from JS strings to numbers
+      d['height'] = +d['height'];
+      d['weight'] = +d['weight'];
+      d['avg'] = +d['avg'];
+      d['HR'] = +d['HR'];
+      return d;
+    },
+    draw);
+</script>
+
+  <h2>Do Left-Handed Batters Have Better Batting Averages?</h2>
+  <h3>Distribution of Batting Averages by Handedness</h3>
+  <input type="checkbox"/>
+  <label>Check this to ignore batting averages of 0</label> 
+  <p />
+</body>

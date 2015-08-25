@@ -1,0 +1,33 @@
+body {
+  font: 10px sans-serif;
+}
+.bar rect {
+  shape-rendering: crispEdges;
+}
+.bar text {
+  fill: #fff;
+}
+.axis path, .axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges; /* prevent anti-aliasing */
+}
+.line {
+  fill: none;
+  stroke-width: 1.5px;
+}
+table.tableizer-table {
+  border: 1px solid #CCC; font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+} 
+.tableizer-table td {
+  padding: 4px;
+  margin: 3px;
+  border: 1px solid #ccc;
+}
+.tableizer-table th {
+  background-color: #104E8B; 
+  color: #FFF;
+  font-weight: bold;
+}
+
